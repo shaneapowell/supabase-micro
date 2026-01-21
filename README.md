@@ -13,71 +13,30 @@ A minimal, dependency-free Supabase client library for MicroPython.
 
 ## Installation
 
-### For MicroPython Devices
+### For MicroPython Devices (ESP32, ESP8266, RP2040)
 
-Copy the library to your MicroPython device:
+Copy the library to your device:
 
 ```bash
-# Using mpremote
-mpremote cp -r supabase_micro :/lib/supabase_micro
+# Using mpremote (recommended)
+mpremote cp -r src/supabase_micro :/lib/supabase_micro
 ```
 
 See [INSTALL.md](INSTALL.md) for detailed installation instructions including Thonny, ampy, and WebREPL methods.
 
-### For Testing Locally (Without Hardware)
-
-Test the library on your computer using MicroPython:
+### For Local Testing (Without Hardware)
 
 ```bash
 # Install MicroPython
 brew install micropython  # macOS
-# or apt-get install micropython  # Linux
 
-# Clone this repo
+# Clone and test
 git clone https://github.com/supabase/supabase-micro.git
 cd supabase-micro
-
-# Install in editable mode (for development)
-pip install -e .
-```
-
-## Testing
-
-### 1. Set up your Supabase project
-
-```bash
-# Create .env file with your credentials
-cp .env.example .env
-# Edit .env and add your SUPABASE_URL and SUPABASE_KEY
-```
-
-Get your credentials from:
-- Supabase Dashboard > Settings > API
-- Copy **Project URL** and **anon/public key**
-
-### 2. Run database migrations
-
-```bash
-# Link to your project (using npx, no installation required)
-npx supabase link --project-ref YOUR_PROJECT_REF
-
-# Push migrations to create tables and sample data
-npx supabase db push
-```
-
-This creates the test database table, sample data, and storage bucket.
-
-### 3. Run tests
-
-```bash
-# Run basic tests (no network required)
 micropython tests/test_basic.py
-
-# Run integration tests (requires Supabase credentials)
-micropython examples/example.py
 ```
 
-The example script will test all features and leave test data in your database for verification.
+See [TESTING.md](TESTING.md) for complete testing guide including Supabase setup and integration tests.
 
 ## Quick Start
 
@@ -428,15 +387,6 @@ The library is designed for memory-constrained devices:
 - **No RPC**: Function calls not supported
 - **No Auth**: Sign up/in methods not implemented
 - **No Realtime**: WebSocket subscriptions not supported
-
-## Future Enhancements
-
-- Advanced filters (like, ilike, in, is)
-- RPC support for PostgreSQL functions
-- Auth methods (sign_up, sign_in, sign_out)
-- Streaming uploads for large files
-- Connection pooling option
-- Async/await version
 
 ## License
 

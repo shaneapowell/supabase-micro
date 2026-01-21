@@ -207,14 +207,6 @@ def log_reading(data):
 5. **Monitor device status** with periodic heartbeat inserts
 6. **Handle deep sleep** for battery-powered devices
 
-## More Examples Coming Soon
-
-- Motion sensor with image capture
-- Multi-sensor dashboard
-- Two-way communication (commands from Supabase)
-- Offline buffering
-- OTA updates
-
 ## Need Help?
 
 - Check the main [README.md](../README.md)

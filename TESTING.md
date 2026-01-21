@@ -8,16 +8,9 @@ This guide explains how to test the supabase-micro library locally without physi
 - [Node.js](https://nodejs.org/) (for npx to run Supabase CLI)
 - A Supabase account and project
 
+**Note:** For MicroPython testing, you don't need `pip install`. The tests use `sys.path` to load the library. However, if you're a Python developer and want better IDE support, you can optionally run `pip install -e .`
+
 ## Quick Start
-
-### 0. Install the package
-
-```bash
-# Install in editable mode for development
-pip install -e .
-```
-
-This makes the package importable so tests and examples can use `from supabase_micro import ...`
 
 ### 1. Get Supabase Credentials
 
@@ -29,9 +22,13 @@ This makes the package importable so tests and examples can use `from supabase_m
    - **Project Reference ID** (e.g., `xxxxx` from the URL)
    - **anon/public key** (starts with `eyJ...`)
 
-### 2. Configure Environment
+### 2. Clone and Configure
 
 ```bash
+# Clone the repository
+git clone https://github.com/supabase/supabase-micro.git
+cd supabase-micro
+
 # Create .env file
 cp .env.example .env
 
@@ -156,12 +153,15 @@ npx supabase db push
 
 ### Import errors
 
-**Problem:** Not using MicroPython
+**Problem:** Not using MicroPython or wrong directory
 
-**Solution:** Use `micropython` command, not `python`:
+**Solution:**
+1. Use `micropython` command, not `python`
+2. Run from project root directory
 ```bash
-micropython test_basic.py  # ✓ Correct
-python test_basic.py       # ✗ Wrong
+micropython tests/test_basic.py       # ✓ Correct
+python tests/test_basic.py            # ✗ Wrong (not MicroPython)
+cd tests && micropython test_basic.py # ✗ Wrong (wrong directory)
 ```
 
 ## Cleaning Up Test Data
@@ -235,7 +235,7 @@ SUPABASE_URL=http://localhost:54321
 SUPABASE_KEY=<shown in terminal after start>
 
 # Run tests
-micropython example.py
+micropython examples/example.py
 ```
 
 This gives you a fully local development environment without using your production Supabase project.

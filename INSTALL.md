@@ -11,7 +11,7 @@ pip install mpremote
 # 2. Connect your device via USB
 
 # 3. Copy the library to your device
-mpremote cp -r supabase_micro :/lib/supabase_micro
+mpremote cp -r src/supabase_micro :/lib/supabase_micro
 
 # 4. Verify installation
 mpremote exec "import supabase_micro; print('✓ Library installed!')"
@@ -30,12 +30,12 @@ pip install adafruit-ampy
 # 3. Copy each file (ampy doesn't support directories)
 ampy --port /dev/ttyUSB0 mkdir /lib
 ampy --port /dev/ttyUSB0 mkdir /lib/supabase_micro
-ampy --port /dev/ttyUSB0 put supabase_micro/__init__.py /lib/supabase_micro/__init__.py
-ampy --port /dev/ttyUSB0 put supabase_micro/client.py /lib/supabase_micro/client.py
-ampy --port /dev/ttyUSB0 put supabase_micro/http.py /lib/supabase_micro/http.py
-ampy --port /dev/ttyUSB0 put supabase_micro/postgrest.py /lib/supabase_micro/postgrest.py
-ampy --port /dev/ttyUSB0 put supabase_micro/storage.py /lib/supabase_micro/storage.py
-ampy --port /dev/ttyUSB0 put supabase_micro/utils.py /lib/supabase_micro/utils.py
+ampy --port /dev/ttyUSB0 put src/supabase_micro/__init__.py /lib/supabase_micro/__init__.py
+ampy --port /dev/ttyUSB0 put src/supabase_micro/client.py /lib/supabase_micro/client.py
+ampy --port /dev/ttyUSB0 put src/supabase_micro/http.py /lib/supabase_micro/http.py
+ampy --port /dev/ttyUSB0 put src/supabase_micro/postgrest.py /lib/supabase_micro/postgrest.py
+ampy --port /dev/ttyUSB0 put src/supabase_micro/storage.py /lib/supabase_micro/storage.py
+ampy --port /dev/ttyUSB0 put src/supabase_micro/utils.py /lib/supabase_micro/utils.py
 
 # 4. Verify
 ampy --port /dev/ttyUSB0 ls /lib/supabase_micro
@@ -46,9 +46,9 @@ ampy --port /dev/ttyUSB0 ls /lib/supabase_micro
 1. Open [Thonny IDE](https://thonny.org/)
 2. Connect your MicroPython device
 3. Click **View → Files** to show the file browser
-4. In the left pane (your computer), navigate to the `supabase_micro` folder
+4. In the left pane (your computer), navigate to `src/supabase_micro` folder
 5. Right-click the `supabase_micro` folder
-6. Select **Upload to /** (or drag and drop to `/lib/`)
+6. Select **Upload to /lib/** (creates `/lib/supabase_micro` on device)
 7. Wait for upload to complete
 
 ### Method 4: Manual File Copy (WebREPL)
@@ -63,22 +63,16 @@ import webrepl_setup
 
 2. Connect to your device's WiFi AP
 3. Open http://micropython.org/webrepl/
-4. Upload each `.py` file to `/lib/supabase_micro/`
+4. Upload each `.py` file from `src/supabase_micro/` to `/lib/supabase_micro/` on device
 
-## For Regular Python (Development/Testing)
+## For Local Development/Testing
 
-```bash
-# Add to your Python path
-import sys
-sys.path.insert(0, '/path/to/supabase_micro/parent/directory')
+See [TESTING.md](TESTING.md) for complete local testing guide.
 
-from supabase_micro import create_client
-```
-
-Or install in editable mode:
+Quick install for Python developers:
 
 ```bash
-cd /path/to/supabase_micro
+cd /path/to/supabase-micro
 pip install -e .
 ```
 
@@ -165,7 +159,7 @@ Individual files:
 **Solutions**:
 1. Try different USB cable (data cable, not charging-only)
 2. Check device is in bootloader mode if needed
-3. Try: `mpremote connect /dev/ttyUSB0 cp -r supabase_micro :/lib/supabase_micro`
+3. Try: `mpremote connect /dev/ttyUSB0 cp -r src/supabase_micro :/lib/supabase_micro`
 4. On macOS, use `/dev/cu.usbserial-*` instead of `/dev/tty.*`
 
 ## Next Steps
