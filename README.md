@@ -54,6 +54,95 @@ else:
     print("Error:", result["error"])
 ```
 
+## Security & Session Management
+
+### Memory-Only Sessions (Secure by Default)
+
+**supabase_micro does NOT store auth tokens on device storage.**
+
+This is a security feature for IoT devices:
+- Tokens are kept in memory only
+- Sessions are cleared on reboot/restart
+- Prevents token theft from device storage
+- Suitable for physically exposed devices
+
+### Re-Authentication After Reboot
+
+After a device reboot, you must re-authenticate. Store credentials in your device configuration:
+
+```python
+# config.py (not in version control)
+SUPABASE_URL = "https://your-project.supabase.co"
+SUPABASE_KEY = "your-anon-key"
+DEVICE_EMAIL = "device001@example.com"  # One email per device
+DEVICE_PASSWORD = "secure-random-password"
+
+# main.py (runs on boot)
+import network
+from supabase_micro import create_client
+import config
+
+# Connect WiFi
+wlan = network.WLAN(network.STA_IF)
+wlan.active(True)
+wlan.connect("wifi-ssid", "wifi-password")
+while not wlan.isconnected():
+    pass
+
+# Create client and authenticate
+client = create_client(config.SUPABASE_URL, config.SUPABASE_KEY)
+result = client.auth.sign_in_with_password(
+    config.DEVICE_EMAIL,
+    config.DEVICE_PASSWORD
+)
+
+if result["status_code"] == 200:
+    print("Authenticated successfully!")
+else:
+    print("Auth failed:", result["error"])
+```
+
+**Why store credentials instead of tokens?**
+- Credentials can be revoked/changed by updating the user in Supabase
+- Tokens cannot be easily revoked without database changes
+- If device is stolen, you can immediately revoke access by changing the password
+
+### Auto-Refresh
+
+Tokens expire after 1 hour by default. Use auto-refresh to keep sessions alive:
+
+```python
+import time
+
+# Sign in
+client.auth.sign_in_with_password(email, password)
+
+# In your main loop
+while True:
+    # Auto-refresh if token expires within 5 minutes
+    result = client.auth.refresh_if_needed(threshold_seconds=300)
+
+    if result["data"]["refreshed"]:
+        print("Token refreshed automatically")
+
+    # Do your work
+    sensor_data = read_sensor()
+    client.table("readings").insert(sensor_data).execute()
+
+    time.sleep(60)  # Check every minute
+```
+
+**Manual refresh check:**
+
+```python
+# Check if refresh is needed
+check = client.auth.should_refresh_token()
+
+if check["data"]["should_refresh"]:
+    print(f"Token expires in {check['data']['expires_in']} seconds")
+    client.auth.refresh_session()
+```
+
 ## Basic Usage
 
 ### Database (PostgREST)
@@ -131,7 +220,7 @@ result = client.storage.from_("bucket").delete("data.txt")
 - **Synchronous only** — No async/await support
 - **No connection pooling** — New connection per request
 - **Basic Auth** — Email/password only (no OAuth, MFA, magic links)
-- **No auto-refresh** — Token refresh must be called manually
+- **No session persistence** — Sessions cleared on reboot (security feature)
 - **No Realtime** — WebSocket subscriptions not supported
 - **No RPC** — Database function calls not supported
 

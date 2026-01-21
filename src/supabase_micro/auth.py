@@ -21,12 +21,12 @@ class AuthClient:
     Supports:
     - Email/password signup and signin
     - Session management (in-memory only)
-    - Token refresh
+    - Token refresh (manual and automatic)
+    - Auto-refresh helpers
     - User operations (get, update)
     - Password reset
 
     Does not support:
-    - Auto-refresh (manual refresh only)
     - Session persistence to disk
     - OAuth providers
     - MFA/OTP
@@ -405,3 +405,86 @@ class AuthClient:
 
         except Exception:
             return None
+
+    def should_refresh_token(self, threshold_seconds=300):
+        """
+        Check if access token should be refreshed.
+
+        Checks if the current token expires within the threshold time.
+        Useful for proactively refreshing tokens before they expire.
+
+        Args:
+            threshold_seconds: Refresh if expires in less than this (default: 300 = 5 min)
+
+        Returns:
+            {"data": {"should_refresh": bool, "expires_in": int}, "status_code": 200}
+            or {"data": {"should_refresh": False}, "status_code": 200} if no session
+
+        Example:
+            check = client.auth.should_refresh_token()
+            if check["data"]["should_refresh"]:
+                print(f"Token expires in {check['data']['expires_in']} seconds")
+                client.auth.refresh_session()
+        """
+        if not self._session or not self._session.get("expires_at"):
+            return {
+                "data": {"should_refresh": False},
+                "status_code": 200
+            }
+
+        from .utils import get_current_timestamp
+        current_time = get_current_timestamp()
+        expires_at = self._session["expires_at"]
+        expires_in = expires_at - current_time
+
+        return {
+            "data": {
+                "should_refresh": expires_in < threshold_seconds,
+                "expires_in": max(0, expires_in)
+            },
+            "status_code": 200
+        }
+
+    def refresh_if_needed(self, threshold_seconds=300):
+        """
+        Automatically refresh session if token expires soon.
+
+        Checks if refresh is needed and performs it if necessary.
+        Safe to call frequently - only refreshes when needed.
+
+        Args:
+            threshold_seconds: Refresh threshold in seconds (default: 300 = 5 min)
+
+        Returns:
+            {"data": {"refreshed": bool, "session": {...}}, "status_code": 200}
+            or {"error": {...}, "status_code": 4xx} if refresh fails
+
+        Example:
+            # In a loop, check and refresh periodically
+            while True:
+                result = client.auth.refresh_if_needed()
+                if result["data"]["refreshed"]:
+                    print("Token was refreshed")
+
+                # Do work...
+                time.sleep(60)
+        """
+        check = self.should_refresh_token(threshold_seconds)
+        should_refresh = check["data"]["should_refresh"]
+
+        if not should_refresh:
+            return {
+                "data": {"refreshed": False, "session": self._session},
+                "status_code": 200
+            }
+
+        # Attempt refresh
+        result = self.refresh_session()
+        if result["status_code"] == 200:
+            return {
+                "data": {"refreshed": True, "session": self._session},
+                "status_code": 200
+            }
+        else:
+            # Return the error from refresh_session
+            return result

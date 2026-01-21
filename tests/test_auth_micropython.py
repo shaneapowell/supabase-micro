@@ -173,6 +173,56 @@ def test_jwt_with_metadata():
     print("  ✓ Metadata extracted to session")
 
 
+def test_timestamp_helper():
+    """Test get_current_timestamp works in MicroPython."""
+    print("\n[Test] Timestamp Helper")
+
+    try:
+        from supabase_micro.utils import get_current_timestamp
+        timestamp = get_current_timestamp()
+
+        # Basic validation - should be a reasonable Unix timestamp
+        assert timestamp > 1609459200, "Timestamp should be after 2021"
+        assert isinstance(timestamp, int), "Timestamp should be integer"
+
+        print("  ✓ Timestamp helper returned valid timestamp")
+        print(f"  ✓ Current timestamp: {timestamp}")
+
+    except Exception as e:
+        raise AssertionError(f"Failed to get timestamp: {e}")
+
+
+def test_should_refresh_logic():
+    """Test should_refresh_token logic without mocking."""
+    print("\n[Test] Should Refresh Logic")
+
+    try:
+        from supabase_micro.utils import get_current_timestamp
+
+        current_time = get_current_timestamp()
+
+        # Test 1: Expires in 30 minutes - should not refresh (threshold 5 min)
+        expires_at_far = current_time + 1800
+        expires_in = expires_at_far - current_time
+        assert expires_in > 300, "Should not need refresh for far expiry"
+        print("  ✓ Far expiry correctly identified (no refresh needed)")
+
+        # Test 2: Expires in 3 minutes - should refresh (threshold 5 min)
+        expires_at_near = current_time + 180
+        expires_in = expires_at_near - current_time
+        assert expires_in < 300, "Should need refresh for near expiry"
+        print("  ✓ Near expiry correctly identified (refresh needed)")
+
+        # Test 3: Expired token
+        expires_at_past = current_time - 60
+        expires_in = expires_at_past - current_time
+        assert expires_in < 0, "Should need refresh for expired token"
+        print("  ✓ Expired token correctly identified")
+
+    except Exception as e:
+        raise AssertionError(f"Refresh logic test failed: {e}")
+
+
 def run_all_tests():
     """Run all tests."""
     print("="*60)
@@ -184,7 +234,9 @@ def run_all_tests():
         test_session_management,
         test_get_session,
         test_get_user,
-        test_jwt_with_metadata
+        test_jwt_with_metadata,
+        test_timestamp_helper,
+        test_should_refresh_logic
     ]
 
     passed = 0

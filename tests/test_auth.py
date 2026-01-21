@@ -5,6 +5,8 @@ Unit tests for supabase_micro auth module.
 import sys
 import os
 import unittest
+import time
+import json
 from unittest.mock import Mock, MagicMock, patch
 
 # Add src to path
@@ -391,6 +393,167 @@ class TestRequestBuilding(unittest.TestCase):
         call_args = self.mock_http_client.request.call_args
         headers = call_args[1]["headers"]
         self.assertIn("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9", headers["Authorization"])
+
+
+class TestAutoRefresh(unittest.TestCase):
+    """Test auto-refresh functionality."""
+
+    def setUp(self):
+        """Set up mock client for testing."""
+        self.mock_http_client = Mock()
+        self.mock_client = Mock()
+        self.mock_client.http_client = self.mock_http_client
+        self.mock_client.url = "https://test.supabase.co"
+        self.mock_client.key = "test-key"
+
+        self.auth = AuthClient(self.mock_client)
+
+    def test_should_refresh_token_no_session(self):
+        """Test should_refresh_token with no active session."""
+        result = self.auth.should_refresh_token()
+
+        self.assertEqual(result["status_code"], 200)
+        self.assertFalse(result["data"]["should_refresh"])
+
+    def test_should_refresh_token_not_expired(self):
+        """Test should_refresh_token when token is fresh."""
+        # Set up session that expires in 30 minutes
+        current_time = int(time.time())
+        expires_at = current_time + 1800  # 30 minutes
+
+        self.auth._session = {
+            "access_token": "token",
+            "refresh_token": "refresh",
+            "expires_at": expires_at,
+            "user": {"id": "123"}
+        }
+
+        # Check with 5 minute threshold - should not need refresh
+        result = self.auth.should_refresh_token(threshold_seconds=300)
+
+        self.assertEqual(result["status_code"], 200)
+        self.assertFalse(result["data"]["should_refresh"])
+        self.assertGreater(result["data"]["expires_in"], 300)
+
+    def test_should_refresh_token_near_expiry(self):
+        """Test should_refresh_token when token expires soon."""
+        # Set up session that expires in 3 minutes
+        current_time = int(time.time())
+        expires_at = current_time + 180  # 3 minutes
+
+        self.auth._session = {
+            "access_token": "token",
+            "refresh_token": "refresh",
+            "expires_at": expires_at,
+            "user": {"id": "123"}
+        }
+
+        # Check with 5 minute threshold - should need refresh
+        result = self.auth.should_refresh_token(threshold_seconds=300)
+
+        self.assertEqual(result["status_code"], 200)
+        self.assertTrue(result["data"]["should_refresh"])
+        self.assertLess(result["data"]["expires_in"], 300)
+
+    def test_should_refresh_token_expired(self):
+        """Test should_refresh_token when token is already expired."""
+        # Set up session that expired 1 minute ago
+        current_time = int(time.time())
+        expires_at = current_time - 60  # 1 minute ago
+
+        self.auth._session = {
+            "access_token": "token",
+            "refresh_token": "refresh",
+            "expires_at": expires_at,
+            "user": {"id": "123"}
+        }
+
+        result = self.auth.should_refresh_token()
+
+        self.assertEqual(result["status_code"], 200)
+        self.assertTrue(result["data"]["should_refresh"])
+        self.assertEqual(result["data"]["expires_in"], 0)  # Already expired
+
+    def test_refresh_if_needed_does_not_refresh_fresh_token(self):
+        """Test refresh_if_needed skips refresh for fresh tokens."""
+        # Set up session that expires in 30 minutes
+        current_time = int(time.time())
+        expires_at = current_time + 1800
+
+        self.auth._session = {
+            "access_token": "old-token",
+            "refresh_token": "refresh",
+            "expires_at": expires_at,
+            "user": {"id": "123"}
+        }
+
+        result = self.auth.refresh_if_needed(threshold_seconds=300)
+
+        self.assertEqual(result["status_code"], 200)
+        self.assertFalse(result["data"]["refreshed"])
+        self.assertEqual(self.auth._session["access_token"], "old-token")
+        # Should not have called refresh endpoint
+        self.mock_http_client.request.assert_not_called()
+
+    def test_refresh_if_needed_refreshes_expiring_token(self):
+        """Test refresh_if_needed refreshes tokens near expiry."""
+        # Set up session that expires in 2 minutes
+        current_time = int(time.time())
+        expires_at = current_time + 120
+
+        self.auth._session = {
+            "access_token": "old-token",
+            "refresh_token": "old-refresh",
+            "expires_at": expires_at,
+            "user": {"id": "123"}
+        }
+
+        # Mock refresh response
+        new_expires_at = current_time + 3600  # New token expires in 1 hour
+        refresh_response = {
+            "access_token": "new-token",
+            "refresh_token": "new-refresh",
+            "user": {"id": "123"},
+            "expires_at": new_expires_at
+        }
+
+        self.mock_http_client.request.return_value = {
+            "status_code": 200,
+            "body": json.dumps(refresh_response).encode('utf-8')
+        }
+
+        result = self.auth.refresh_if_needed(threshold_seconds=300)
+
+        self.assertEqual(result["status_code"], 200)
+        self.assertTrue(result["data"]["refreshed"])
+        self.assertEqual(self.auth._session["access_token"], "new-token")
+        self.assertEqual(self.auth._session["refresh_token"], "new-refresh")
+
+    def test_refresh_if_needed_handles_refresh_failure(self):
+        """Test refresh_if_needed handles refresh errors gracefully."""
+        # Set up expiring session
+        current_time = int(time.time())
+        expires_at = current_time + 120
+
+        self.auth._session = {
+            "access_token": "old-token",
+            "refresh_token": "old-refresh",
+            "expires_at": expires_at,
+            "user": {"id": "123"}
+        }
+
+        # Mock refresh failure
+        self.mock_http_client.request.return_value = {
+            "status_code": 401,
+            "body": json.dumps({"message": "Invalid refresh token"}).encode('utf-8')
+        }
+
+        result = self.auth.refresh_if_needed(threshold_seconds=300)
+
+        self.assertEqual(result["status_code"], 401)
+        self.assertIn("error", result)
+        # Session should remain unchanged on failure
+        self.assertEqual(self.auth._session["access_token"], "old-token")
 
 
 if __name__ == "__main__":

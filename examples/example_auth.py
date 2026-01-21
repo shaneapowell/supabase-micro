@@ -63,7 +63,7 @@ def print_result(title, result):
 
 def demo_signup(client):
     """Demonstrate user signup."""
-    print("\n[1/11] Testing signup...")
+    print("\n[1/12] Testing signup...")
 
     # Sign up new user
     result = client.auth.sign_up(
@@ -100,7 +100,7 @@ def demo_signup(client):
 
 def demo_signin(client):
     """Demonstrate user signin."""
-    print("\n[2/11] Testing signin...")
+    print("\n[2/12] Testing signin...")
 
     result = client.auth.sign_in_with_password(
         email=TEST_EMAIL,
@@ -122,7 +122,7 @@ def demo_signin(client):
 
 def demo_get_session(client):
     """Demonstrate getting current session."""
-    print("\n[3/11] Testing get_session...")
+    print("\n[3/12] Testing get_session...")
 
     result = client.auth.get_session()
     print_result("Get Session Result", result)
@@ -141,7 +141,7 @@ def demo_get_session(client):
 
 def demo_get_user(client):
     """Demonstrate getting current user."""
-    print("\n[4/11] Testing get_user...")
+    print("\n[4/12] Testing get_user...")
 
     result = client.auth.get_user()
     print_result("Get User Result", result)
@@ -159,7 +159,7 @@ def demo_get_user(client):
 
 def demo_update_user(client):
     """Demonstrate updating user metadata."""
-    print("\n[5/11] Testing update_user...")
+    print("\n[5/12] Testing update_user...")
 
     result = client.auth.update_user({
         "data": {
@@ -183,7 +183,7 @@ def demo_update_user(client):
 
 def demo_authenticated_query(client):
     """Demonstrate authenticated query with RLS."""
-    print("\n[6/11] Testing authenticated query (RLS)...")
+    print("\n[6/12] Testing authenticated query (RLS)...")
 
     # Get current user ID
     user_result = client.auth.get_user()
@@ -213,7 +213,7 @@ def demo_authenticated_query(client):
 
 def demo_refresh_session(client):
     """Demonstrate token refresh."""
-    print("\n[7/11] Testing refresh_session...")
+    print("\n[7/12] Testing refresh_session...")
 
     result = client.auth.refresh_session()
     print_result("Refresh Session Result", result)
@@ -230,7 +230,7 @@ def demo_refresh_session(client):
 
 def demo_password_reset(client):
     """Demonstrate password reset email."""
-    print("\n[8/11] Testing reset_password_for_email...")
+    print("\n[8/12] Testing reset_password_for_email...")
 
     result = client.auth.reset_password_for_email(
         email=TEST_EMAIL,
@@ -252,7 +252,7 @@ def demo_password_reset(client):
 
 def demo_rls_anonymous_blocked(client):
     """Demonstrate RLS blocking anonymous users."""
-    print("\n[9/11] Testing RLS - Anonymous user blocked...")
+    print("\n[9/12] Testing RLS - Anonymous user blocked...")
 
     # Sign out first to become anonymous
     client.auth.sign_out()
@@ -280,7 +280,7 @@ def demo_rls_anonymous_blocked(client):
 
 def demo_rls_cross_user_blocked(client):
     """Demonstrate RLS blocking cross-user access using two real users."""
-    print("\n[10/11] Testing RLS - Cross-user access blocked...")
+    print("\n[10/12] Testing RLS - Cross-user access blocked...")
 
     # Define second test user
     user2_email = "test2@example.com"
@@ -415,9 +415,68 @@ def demo_rls_cross_user_blocked(client):
     return True
 
 
+def demo_auto_refresh(client):
+    """Demonstrate auto-refresh functionality."""
+    print("\n[11/12] Testing auto-refresh...")
+
+    # First, sign in to get a session
+    print("\n  Signing in to get a session...")
+    result = client.auth.sign_in_with_password(
+        "user1@example.com",
+        "password123"
+    )
+
+    if result["status_code"] != 200:
+        print("  ✗ Need to sign in first")
+        return False
+
+    print("  ✓ Signed in successfully")
+
+    # Check if token needs refresh
+    print("\n  Checking if token needs refresh...")
+    check = client.auth.should_refresh_token(threshold_seconds=300)
+
+    print(f"  Status: {check['status_code']}")
+    print(f"  Should refresh: {check['data']['should_refresh']}")
+    print(f"  Expires in: {check['data']['expires_in']} seconds")
+
+    if check["data"]["should_refresh"]:
+        print("  Token expires soon - needs refresh")
+    else:
+        print("  Token is fresh - no refresh needed")
+
+    # Test auto-refresh
+    print("\n  Testing auto-refresh...")
+    result = client.auth.refresh_if_needed(threshold_seconds=300)
+
+    print(f"  Status: {result['status_code']}")
+    print(f"  Was refreshed: {result['data']['refreshed']}")
+
+    if result["data"]["refreshed"]:
+        print("  ✓ Token was refreshed automatically")
+    else:
+        print("  ✓ Token was fresh, no refresh needed")
+
+    # Show typical usage pattern
+    print("\n  Typical usage in IoT loop:")
+    print("  ```python")
+    print("  while True:")
+    print("      # Auto-refresh if needed")
+    print("      client.auth.refresh_if_needed()")
+    print("")
+    print("      # Do work")
+    print("      data = read_sensor()")
+    print("      client.table('readings').insert(data).execute()")
+    print("")
+    print("      time.sleep(60)")
+    print("  ```")
+
+    return True
+
+
 def demo_signout(client):
     """Demonstrate sign out."""
-    print("\n[11/11] Testing sign_out...")
+    print("\n[12/12] Testing sign_out...")
 
     result = client.auth.sign_out()
     print_result("Sign Out Result", result)
@@ -460,6 +519,7 @@ def main():
     success.append(("Password Reset", demo_password_reset(client)))
     success.append(("RLS: Anonymous Blocked", demo_rls_anonymous_blocked(client)))
     success.append(("RLS: Cross-User Blocked", demo_rls_cross_user_blocked(client)))
+    success.append(("Auto-Refresh", demo_auto_refresh(client)))
     success.append(("Sign Out", demo_signout(client)))
 
     # Summary

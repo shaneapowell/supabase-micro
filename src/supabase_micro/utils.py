@@ -201,3 +201,23 @@ def guess_content_type(path):
     }
 
     return mime_types.get(ext, "application/octet-stream")
+
+
+def get_current_timestamp():
+    """
+    Get current Unix timestamp (MicroPython compatible).
+
+    Returns:
+        int: Current Unix timestamp in seconds
+
+    Example:
+        >>> timestamp = get_current_timestamp()
+        >>> print(timestamp)
+        1704067200
+    """
+    try:
+        import time
+        return int(time.time())
+    except ImportError:
+        import utime
+        return int(utime.time())
