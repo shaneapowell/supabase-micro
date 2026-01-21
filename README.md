@@ -13,18 +13,68 @@ A minimal, dependency-free Supabase client library for MicroPython.
 
 ## Installation
 
-### Option 1: Manual Installation
+### For MicroPython Devices
 
-Copy the `supabase-micro` directory to your MicroPython device:
+Copy the library to your MicroPython device:
 
 ```bash
-# Copy all files to your device
-mpremote cp -r supabase-micro :/lib/supabase-micro
+# Using mpremote
+mpremote cp -r supabase_micro :/lib/supabase_micro
 ```
 
-### Option 2: Direct Copy
+See [INSTALL.md](INSTALL.md) for detailed installation instructions including Thonny, ampy, and WebREPL methods.
 
-Download and copy individual files to your device's `/lib` directory.
+### For Testing Locally (Without Hardware)
+
+Test the library on your computer using MicroPython:
+
+```bash
+# Install MicroPython
+brew install micropython  # macOS
+# or apt-get install micropython  # Linux
+
+# Clone this repo
+git clone <your-repo-url>
+cd supabase_micro
+```
+
+## Testing
+
+### 1. Set up your Supabase project
+
+```bash
+# Create .env file with your credentials
+cp .env.example .env
+# Edit .env and add your SUPABASE_URL and SUPABASE_KEY
+```
+
+Get your credentials from:
+- Supabase Dashboard > Settings > API
+- Copy **Project URL** and **anon/public key**
+
+### 2. Run database migrations
+
+```bash
+# Link to your project (using npx, no installation required)
+npx supabase link --project-ref YOUR_PROJECT_REF
+
+# Push migrations to create tables and sample data
+npx supabase db push
+```
+
+This creates the test database table, sample data, and storage bucket.
+
+### 3. Run tests
+
+```bash
+# Run basic tests (no network required)
+micropython test_basic.py
+
+# Run integration tests (requires Supabase credentials)
+micropython example.py
+```
+
+The example script will test all features and leave test data in your database for verification.
 
 ## Quick Start
 
