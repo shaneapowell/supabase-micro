@@ -34,8 +34,11 @@ brew install micropython  # macOS
 # or apt-get install micropython  # Linux
 
 # Clone this repo
-git clone <your-repo-url>
-cd supabase_micro
+git clone https://github.com/supabase/supabase-micro.git
+cd supabase-micro
+
+# Install in editable mode (for development)
+pip install -e .
 ```
 
 ## Testing
@@ -68,10 +71,10 @@ This creates the test database table, sample data, and storage bucket.
 
 ```bash
 # Run basic tests (no network required)
-micropython test_basic.py
+micropython tests/test_basic.py
 
 # Run integration tests (requires Supabase credentials)
-micropython example.py
+micropython examples/example.py
 ```
 
 The example script will test all features and leave test data in your database for verification.

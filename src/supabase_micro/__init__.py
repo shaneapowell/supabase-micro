@@ -22,7 +22,7 @@ Example usage:
     result = client.table("countries").delete().eq("id", 1).execute()
 """
 
-from client import SupabaseClient
+from supabase_micro.client import SupabaseClient
 
 __version__ = "0.1.0"
 __all__ = ["create_client", "SupabaseClient"]

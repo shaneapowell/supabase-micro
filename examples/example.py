@@ -4,22 +4,28 @@ This script demonstrates basic database and storage operations.
 Create a .env file with SUPABASE_URL and SUPABASE_KEY or set environment variables.
 """
 
-def load_env(filename=".env"):
+def load_env():
     """Load environment variables from .env file."""
     env_vars = {}
-    try:
-        with open(filename, "r") as f:
-            for line in f:
-                line = line.strip()
-                # Skip empty lines and comments
-                if not line or line.startswith("#"):
-                    continue
-                # Parse KEY=VALUE
-                if "=" in line:
-                    key, value = line.split("=", 1)
-                    env_vars[key.strip()] = value.strip()
-    except:
-        pass  # .env file not found or error reading
+    # Try multiple paths
+    paths = ["../.env", ".env", "../.env"]
+
+    for filename in paths:
+        try:
+            with open(filename, "r") as f:
+                for line in f:
+                    line = line.strip()
+                    # Skip empty lines and comments
+                    if not line or line.startswith("#"):
+                        continue
+                    # Parse KEY=VALUE
+                    if "=" in line:
+                        key, value = line.split("=", 1)
+                        env_vars[key.strip()] = value.strip()
+                if env_vars:  # Found and loaded
+                    break
+        except:
+            continue  # Try next path
     return env_vars
 
 # Load from .env file
@@ -48,7 +54,13 @@ if not SUPABASE_URL or not SUPABASE_KEY:
     import sys
     sys.exit(1)
 
-from client import SupabaseClient
+import sys
+
+# Add src to path for MicroPython
+# Works when run from root: micropython examples/example.py
+sys.path.insert(0, 'src')
+
+from supabase_micro.client import SupabaseClient
 
 def create_client(url, key):
     return SupabaseClient(url, key)

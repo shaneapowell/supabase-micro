@@ -10,6 +10,15 @@ This guide explains how to test the supabase-micro library locally without physi
 
 ## Quick Start
 
+### 0. Install the package
+
+```bash
+# Install in editable mode for development
+pip install -e .
+```
+
+This makes the package importable so tests and examples can use `from supabase_micro import ...`
+
 ### 1. Get Supabase Credentials
 
 1. Go to [Supabase Dashboard](https://supabase.com/dashboard)
@@ -54,7 +63,7 @@ This will:
 Test library components without network calls:
 
 ```bash
-micropython test_basic.py
+micropython tests/test_basic.py
 ```
 
 This tests:
@@ -69,7 +78,7 @@ This tests:
 Test actual Supabase API calls:
 
 ```bash
-micropython example.py
+micropython examples/example.py
 ```
 
 This tests:
@@ -209,8 +218,8 @@ npx supabase link --project-ref "$SUPABASE_PROJECT_REF"
 npx supabase db push
 
 # Run tests
-micropython test_basic.py
-micropython example.py
+micropython tests/test_basic.py
+micropython examples/example.py
 ```
 
 ## Local Development with Supabase

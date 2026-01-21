@@ -1,9 +1,9 @@
 """Main Supabase client for MicroPython."""
 
-from http import HTTPClient
-from utils import parse_url
-from postgrest import PostgrestQueryBuilder
-from storage import StorageClient
+from supabase_micro.http import HTTPClient
+from supabase_micro.utils import parse_url
+from supabase_micro.postgrest import PostgrestQueryBuilder
+from supabase_micro.storage import StorageClient
 
 
 class SupabaseClient:

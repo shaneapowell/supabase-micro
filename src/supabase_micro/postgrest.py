@@ -5,7 +5,7 @@ try:
 except ImportError:
     import ujson as _json
 
-from utils import url_encode
+from supabase_micro.utils import url_encode
 
 
 class PostgrestQueryBuilder:

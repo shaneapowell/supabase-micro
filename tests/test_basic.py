@@ -6,15 +6,18 @@ Run this to verify the library is working correctly.
 
 import sys
 
+# Add src to path for MicroPython
+sys.path.insert(0, 'src')
+
 print("Testing supabase-micro library components...")
 print("=" * 60)
 
 # Test 1: Import modules
 print("\n1. Testing imports...")
 try:
-    from client import SupabaseClient
-    from utils import parse_url, url_encode, url_encode_value
-    from utils import generate_boundary, build_multipart_body, guess_content_type
+    from supabase_micro.client import SupabaseClient
+    from supabase_micro.utils import parse_url, url_encode, url_encode_value
+    from supabase_micro.utils import generate_boundary, build_multipart_body, guess_content_type
 
     def create_client(url, key):
         return SupabaseClient(url, key)
