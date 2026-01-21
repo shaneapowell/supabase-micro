@@ -70,3 +70,8 @@ Thumbs.db
 # Local test configuration files
 test_config.py
 secrets.py
+
+
+.env
+.env.local
+.env.prod

@@ -244,9 +244,12 @@ class StorageBucket:
                 data = _json.loads(response_body.decode('utf-8'))
             else:
                 data = None
-        except (ValueError, UnicodeDecodeError):
+        except:
             # If JSON parsing fails, return raw body
-            data = response_body.decode('utf-8') if response_body else None
+            try:
+                data = response_body.decode('utf-8') if response_body else None
+            except:
+                data = response_body
 
         # Return success or error based on status code
         if 200 <= status_code < 300:

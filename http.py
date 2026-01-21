@@ -148,7 +148,7 @@ class HTTPClient:
         return line
 
     def _read_body(self, sock, headers):
-        """Read response body based on Content-Length or until EOF.
+        """Read response body based on Content-Length, chunked encoding, or until EOF.
 
         Args:
             sock: Socket to read from
@@ -157,11 +157,53 @@ class HTTPClient:
         Returns:
             bytes: Response body
         """
-        content_length = headers.get('content-length')
+        # Check for chunked transfer encoding
+        transfer_encoding = headers.get('transfer-encoding', '').lower()
 
-        if content_length:
+        if 'chunked' in transfer_encoding:
+            # Handle chunked encoding
+            chunks = []
+            while True:
+                # Read chunk size line (hex number)
+                size_line = self._read_line(sock)
+                if not size_line:
+                    break
+
+                # Parse chunk size (may have chunk extensions after ';')
+                size_str = size_line.decode('utf-8').split(';')[0].strip()
+                try:
+                    chunk_size = int(size_str, 16)
+                except ValueError:
+                    break
+
+                # If chunk size is 0, we're done
+                if chunk_size == 0:
+                    # Read trailing headers (if any) until empty line
+                    while True:
+                        trailer = self._read_line(sock)
+                        if not trailer or trailer == b'':
+                            break
+                    break
+
+                # Read chunk data
+                chunk_data = b""
+                while len(chunk_data) < chunk_size:
+                    remaining = chunk_size - len(chunk_data)
+                    data = sock.read(remaining) if hasattr(sock, 'read') else sock.recv(remaining)
+                    if not data:
+                        break
+                    chunk_data += data
+
+                chunks.append(chunk_data)
+
+                # Read trailing \r\n after chunk data
+                self._read_line(sock)
+
+            return b"".join(chunks)
+
+        elif headers.get('content-length'):
             # Read exact length
-            length = int(content_length)
+            length = int(headers['content-length'])
             body = b""
             while len(body) < length:
                 chunk = sock.read(length - len(body)) if hasattr(sock, 'read') else sock.recv(length - len(body))

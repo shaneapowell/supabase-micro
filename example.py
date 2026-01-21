@@ -1,14 +1,57 @@
 """Example usage of supabase-micro library.
 
 This script demonstrates basic database and storage operations.
-Replace the URL and KEY with your actual Supabase credentials.
+Create a .env file with SUPABASE_URL and SUPABASE_KEY or set environment variables.
 """
 
-from supabase_micro import create_client
+def load_env(filename=".env"):
+    """Load environment variables from .env file."""
+    env_vars = {}
+    try:
+        with open(filename, "r") as f:
+            for line in f:
+                line = line.strip()
+                # Skip empty lines and comments
+                if not line or line.startswith("#"):
+                    continue
+                # Parse KEY=VALUE
+                if "=" in line:
+                    key, value = line.split("=", 1)
+                    env_vars[key.strip()] = value.strip()
+    except:
+        pass  # .env file not found or error reading
+    return env_vars
 
-# Configuration - REPLACE THESE WITH YOUR CREDENTIALS
-SUPABASE_URL = "https://your-project.supabase.co"
-SUPABASE_KEY = "your-anon-key"
+# Load from .env file
+env = load_env()
+SUPABASE_URL = env.get("SUPABASE_URL")
+SUPABASE_KEY = env.get("SUPABASE_KEY")
+
+# Fallback to environment variables if .env not found
+if not SUPABASE_URL or not SUPABASE_KEY:
+    try:
+        import os
+        SUPABASE_URL = SUPABASE_URL or os.getenv("SUPABASE_URL")
+        SUPABASE_KEY = SUPABASE_KEY or os.getenv("SUPABASE_KEY")
+    except:
+        pass
+
+# Validate credentials
+if not SUPABASE_URL or not SUPABASE_KEY:
+    print("ERROR: Please provide Supabase credentials")
+    print("\nOption 1 - Create a .env file:")
+    print("  SUPABASE_URL=https://your-project.supabase.co")
+    print("  SUPABASE_KEY=your-anon-key")
+    print("\nOption 2 - Set environment variables:")
+    print("  export SUPABASE_URL='https://your-project.supabase.co'")
+    print("  export SUPABASE_KEY='your-anon-key'")
+    import sys
+    sys.exit(1)
+
+from client import SupabaseClient
+
+def create_client(url, key):
+    return SupabaseClient(url, key)
 
 # Initialize client
 client = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -26,7 +69,7 @@ if result["status_code"] == 200:
     for row in result["data"]:
         print(f"   - {row}")
 else:
-    print(f"   Error {result['status_code']}: {result['error']}")
+    print(f"   Error {result['status_code']}: {result.get('error', 'Unknown error')}")
 
 # Example 2: SELECT with filters
 print("\n2. SELECT with filters - Countries in Asia")
@@ -43,7 +86,7 @@ if result["status_code"] == 200:
     for row in result["data"]:
         print(f"   - {row['name']} ({row['code']})")
 else:
-    print(f"   Error: {result['error']}")
+    print(f"   Error: {result.get('error', 'Unknown error')}")
 
 # Example 3: INSERT
 print("\n3. INSERT - Add a new country")
@@ -53,11 +96,11 @@ result = client.table("countries").insert({
     "continent": "Test"
 }).execute()
 
-if result["status_code"] == 201:
+if 200 <= result["status_code"] < 300:
     print(f"   Success! Inserted: {result['data']}")
     test_id = result["data"][0]["id"] if isinstance(result["data"], list) else result["data"]["id"]
 else:
-    print(f"   Error: {result['error']}")
+    print(f"   Error: {result.get('error', 'Unknown error')}")
     test_id = None
 
 # Example 4: UPDATE
@@ -70,25 +113,16 @@ if test_id:
         .execute()
     )
 
-    if result["status_code"] == 200:
+    if 200 <= result["status_code"] < 300:
         print(f"   Success! Updated: {result['data']}")
     else:
-        print(f"   Error: {result['error']}")
+        print(f"   Error: {result.get('error', 'Unknown error')}")
 
-# Example 5: DELETE
+# Example 5: Verify INSERT
 if test_id:
-    print("\n5. DELETE - Remove the test country")
-    result = (
-        client.table("countries")
-        .delete()
-        .eq("id", test_id)
-        .execute()
-    )
-
-    if result["status_code"] == 200:
-        print("   Success! Deleted the test record")
-    else:
-        print(f"   Error: {result['error']}")
+    print("\n5. VERIFY - Check the inserted country in your dashboard")
+    print(f"   Visit your Supabase Dashboard > Table Editor > countries")
+    print(f"   Look for country with ID: {test_id} named 'Updated Test Country'")
 
 # Example 6: Storage - List files
 print("\n6. STORAGE - List files in bucket")
@@ -99,7 +133,7 @@ if result["status_code"] == 200:
     for file in result["data"]:
         print(f"   - {file.get('name', 'unknown')}")
 else:
-    print(f"   Error: {result['error']}")
+    print(f"   Error: {result.get('error', 'Unknown error')}")
 
 # Example 7: Storage - Upload
 print("\n7. STORAGE - Upload a test file")
@@ -110,10 +144,10 @@ result = client.storage.from_("test-bucket").upload(
     "text/plain"
 )
 
-if result["status_code"] == 200:
+if 200 <= result["status_code"] < 300:
     print("   Success! File uploaded")
 else:
-    print(f"   Error: {result['error']}")
+    print(f"   Error: {result.get('error', 'Unknown error')}")
 
 # Example 8: Storage - Download
 print("\n8. STORAGE - Download the test file")
@@ -124,17 +158,16 @@ if result["status_code"] == 200:
     print(f"   Success! Downloaded {len(downloaded_data)} bytes")
     print(f"   Content: {downloaded_data.decode('utf-8')}")
 else:
-    print(f"   Error: {result['error']}")
+    print(f"   Error: {result.get('error', 'Unknown error')}")
 
-# Example 9: Storage - Delete
-print("\n9. STORAGE - Delete the test file")
-result = client.storage.from_("test-bucket").delete("test.txt")
-
-if result["status_code"] == 200:
-    print("   Success! File deleted")
-else:
-    print(f"   Error: {result['error']}")
+# Example 9: Verify Upload
+print("\n9. VERIFY - Check uploaded file in your dashboard")
+print("   Visit your Supabase Dashboard > Storage > test-bucket")
+print("   You should see 'test.txt' file")
 
 print("\n" + "=" * 50)
 print("Example completed!")
+print("\nVerify in your Supabase Dashboard:")
+print("  • Table Editor > countries - Should have 'Updated Test Country'")
+print("  • Storage > test-bucket - Should have 'test.txt' file")
 print("=" * 50)
