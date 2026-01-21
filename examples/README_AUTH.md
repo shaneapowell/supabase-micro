@@ -1,94 +1,29 @@
-# Auth Example Usage
+# Auth Example
 
-## Local Testing (Default)
+Tests all authentication features: signup, signin, sessions, RLS, user operations, token refresh, password reset, signout.
 
-Just run it:
+## Quick Start
+
+**Local:** (uses http://127.0.0.1:54321)
 ```bash
+supabase start
 python examples/example_auth.py
 ```
 
-Uses local Supabase at `http://127.0.0.1:54321`
-
-## Remote Testing (Production)
-
-### Step 1: Create User in Remote Supabase
-
-1. Go to your Supabase Dashboard → **Authentication** → **Users**
-2. Click **Add user** → **Create new user**
-3. Enter:
-   - Email: `test@example.com` (or your choice)
-   - Password: `testpassword123` (or your choice)
-   - Confirm email: ✓ (check this)
-4. Click **Create user**
-
-### Step 2: Create .env File
-
+**Remote:**
 ```bash
-# Copy the example file
+# 1. Copy and update credentials
 cp .env.example .env
+nano .env  # Add your URL and anon key from Dashboard → Settings → API
 
-# Edit with your credentials
-nano .env
-```
-
-Update with your values:
-```bash
-SUPABASE_URL=https://your-project-ref.supabase.co
-SUPABASE_KEY=your-anon-key-here
-TEST_EMAIL=test@example.com
-TEST_PASSWORD=testpassword123
-```
-
-**Where to find your credentials:**
-- Dashboard → **Settings** → **API**
-- URL: "Project URL"
-- Key: "anon public" key
-
-### Step 3: Install python-dotenv (Optional)
-
-```bash
-pip install python-dotenv
-```
-
-If not installed, you can use environment variables directly:
-```bash
-export SUPABASE_URL=https://your-project.supabase.co
-export SUPABASE_KEY=your-anon-key
-export TEST_EMAIL=test@example.com
-export TEST_PASSWORD=testpassword123
+# 2. Run
 python examples/example_auth.py
 ```
 
-### Step 4: Run
-
-```bash
-python examples/example_auth.py
-```
-
-You should see:
-```
-Loaded configuration from .env file
-Connecting to: https://your-project.supabase.co
-...
-Passed: 9/9
-🎉 All tests passed!
-```
+On first run, signup creates the test user automatically.
 
 ## Troubleshooting
 
-**"User already exists"**
-- Normal after first run
-- User is already created in your database
-
-**"Invalid credentials"**
-- Password doesn't match
-- Check TEST_EMAIL and TEST_PASSWORD in .env
-
-**"Could not find the table 'public.todos'"**
-- Table doesn't exist in remote database
-- Push migration: `supabase db push`
-- Or create manually in Dashboard → **Table Editor**
-
-**403 RLS violation**
-- RLS policies not set up
-- Ensure policies allow authenticated users to insert/select their own rows
+- **Table not found**: Push migration with `supabase db push` or create todos table manually
+- **Invalid credentials**: Check anon key in .env (long token starting with `eyJ...`)
+- **403 RLS violation**: Ensure RLS policies allow authenticated users to manage their own rows
