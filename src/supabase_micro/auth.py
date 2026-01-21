@@ -41,7 +41,6 @@ class AuthClient:
         """
         self._client = client
         self._session = None
-        self._auth_url = f"{client.url}/auth/v1"
 
     def sign_up(self, email, password, options=None):
         """
@@ -200,7 +199,7 @@ class AuthClient:
 
         result = self._request("POST", "/token?grant_type=refresh_token", body)
 
-        # Update session with new tokens
+        # Update session with new tokens and wrap in standard format
         if result["status_code"] == 200:
             data = result["data"]
             self._set_session(
@@ -208,6 +207,8 @@ class AuthClient:
                 data.get("refresh_token"),
                 data.get("user")
             )
+            # Wrap in standard format for consistency
+            result["data"] = {"session": self._session}
 
         return result
 
@@ -233,10 +234,17 @@ class AuthClient:
 
         result = self._request("PUT", "/user", attributes)
 
-        # Update cached user in session
-        if result["status_code"] == 200 and "user" in result.get("data", {}):
-            if self._session:
-                self._session["user"] = result["data"]["user"]
+        # Wrap user in standard format and update cached user
+        if result["status_code"] == 200:
+            user_data = result.get("data", {})
+            # If data is the user object directly (not wrapped), wrap it
+            if "id" in user_data and "user" not in user_data:
+                result["data"] = {"user": user_data}
+                user_data = result["data"]
+
+            # Update cached user in session
+            if self._session and "user" in user_data:
+                self._session["user"] = user_data["user"]
 
         return result
 
@@ -275,7 +283,8 @@ class AuthClient:
             {"data": {...}, "status_code": 2xx}
             or {"error": {...}, "status_code": 4xx}
         """
-        url = f"{self._auth_url}{path}"
+        # Build full path for auth API
+        full_path = f"/auth/v1{path}"
 
         # Build headers
         headers = {
@@ -293,21 +302,30 @@ class AuthClient:
         try:
             result = self._client.http_client.request(
                 method=method,
-                url=url,
+                path=full_path,
                 headers=headers,
                 body=json.dumps(body) if body else None
             )
 
             # Parse response
             status_code = result.get("status_code", 500)
-            response_body = result.get("body", {})
+            response_body = result.get("body", b"")
+
+            # Parse JSON response
+            try:
+                if response_body:
+                    data = json.loads(response_body.decode('utf-8'))
+                else:
+                    data = {}
+            except:
+                # If JSON parsing fails, return error
+                data = {"message": "Failed to parse response"}
 
             if 200 <= status_code < 300:
-                return {"data": response_body, "status_code": status_code}
+                return {"data": data, "status_code": status_code}
             else:
                 # Error response
-                error = response_body if isinstance(response_body, dict) else {"message": str(response_body)}
-                return {"error": error, "status_code": status_code}
+                return {"error": data, "status_code": status_code}
 
         except Exception as e:
             return {

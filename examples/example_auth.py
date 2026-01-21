@@ -11,10 +11,18 @@ Demonstrates:
 - Sign out
 
 Setup:
-1. Start local Supabase: cd supabase && supabase start
-2. Create a 'todos' table with RLS enabled (see schema.sql)
-3. Update SUPABASE_URL and SUPABASE_KEY below
-4. Run: python examples/example_auth.py
+
+For local testing:
+1. Start local Supabase: supabase start
+2. Run: python examples/example_auth.py
+
+For remote testing:
+1. Create .env file with your credentials:
+   SUPABASE_URL=https://your-project.supabase.co
+   SUPABASE_KEY=your-anon-key
+   TEST_EMAIL=user@example.com
+   TEST_PASSWORD=yourpassword
+2. Run: python examples/example_auth.py
 """
 
 import sys
@@ -26,13 +34,27 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from supabase_micro import create_client
 
-# Configuration (update with your local Supabase instance)
-SUPABASE_URL = "http://127.0.0.1:54321"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0"
+# Try to load .env file if available (optional)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+    print("Loaded configuration from .env file")
+except ImportError:
+    pass  # python-dotenv not installed, use env vars or defaults
+
+# Configuration - reads from environment variables or uses local defaults
+SUPABASE_URL = os.getenv(
+    "SUPABASE_URL",
+    "http://127.0.0.1:54321"  # Local default
+)
+SUPABASE_KEY = os.getenv(
+    "SUPABASE_KEY",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0"  # Local default
+)
 
 # Test user credentials
-TEST_EMAIL = "test@example.com"
-TEST_PASSWORD = "testpassword123"
+TEST_EMAIL = os.getenv("TEST_EMAIL", "test@example.com")
+TEST_PASSWORD = os.getenv("TEST_PASSWORD", "testpassword123")
 
 
 def print_result(title, result):
@@ -169,8 +191,17 @@ def demo_authenticated_query(client):
     """Demonstrate authenticated query with RLS."""
     print("\n[6/9] Testing authenticated query (RLS)...")
 
-    # Try to insert a todo (user context will be applied by RLS)
+    # Get current user ID
+    user_result = client.auth.get_user()
+    if user_result["status_code"] != 200:
+        print("✗ Could not get user")
+        return False
+
+    user_id = user_result["data"]["user"]["id"]
+
+    # Try to insert a todo (RLS will verify user_id matches auth.uid())
     result = client.table("todos").insert({
+        "user_id": user_id,
         "task": "Test task from auth example",
         "is_complete": False
     }).execute()
@@ -179,7 +210,7 @@ def demo_authenticated_query(client):
 
     if result["status_code"] == 201:
         print("✓ Authenticated query successful!")
-        print("  Note: user_id will be automatically set by RLS")
+        print("  RLS verified user_id matches authenticated user")
         return True
     else:
         print("⚠ Query failed (make sure 'todos' table exists with RLS enabled)")
