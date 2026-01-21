@@ -396,9 +396,9 @@ Contributions welcome! Please test on actual MicroPython hardware before submitt
 ## Support
 
 For issues and questions:
-- GitHub Issues: [Create an issue](https://github.com/your-repo/supabase-micro/issues)
+- GitHub Issues: [Create an issue](https://github.com/supabase/supabase-micro/issues)
 - Supabase Discord: [Join here](https://discord.supabase.com)
 
 ## Credits
 
-Inspired by [supabase-py](https://github.com/supabase-community/supabase-py) and designed for MicroPython environments.
+Based on [supabase-py](https://github.com/supabase/supabase-py) and designed for MicroPython environments.
