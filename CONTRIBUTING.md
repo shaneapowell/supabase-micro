@@ -1,6 +1,6 @@
-# Testing Guide
+# Contributing & Testing
 
-This guide explains how to test the supabase-micro library locally without physical hardware.
+This guide explains how to test the supabase-micro library locally and contribute to development.
 
 ## Prerequisites
 
@@ -20,7 +20,7 @@ This guide explains how to test the supabase-micro library locally without physi
 4. Copy:
    - **Project URL** (e.g., `https://xxxxx.supabase.co`)
    - **Project Reference ID** (e.g., `xxxxx` from the URL)
-   - **anon/public key** (starts with `eyJ...`)
+   - **Publishable key** (`sb_publishable_...`) or legacy **anon key** (`eyJ...`)
 
 ### 2. Clone and Configure
 
@@ -34,7 +34,7 @@ cp .env.example .env
 
 # Edit .env and add your credentials
 SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_KEY=your-anon-key-here
+SUPABASE_KEY=your-publishable-or-anon-key
 ```
 
 ### 3. Run Database Migrations
@@ -159,9 +159,9 @@ npx supabase db push
 1. Use `micropython` command, not `python`
 2. Run from project root directory
 ```bash
-micropython tests/test_basic.py       # ✓ Correct
-python tests/test_basic.py            # ✗ Wrong (not MicroPython)
-cd tests && micropython test_basic.py # ✗ Wrong (wrong directory)
+micropython tests/test_basic.py       # Correct
+python tests/test_basic.py            # Wrong (not MicroPython)
+cd tests && micropython test_basic.py # Wrong (wrong directory)
 ```
 
 ## Cleaning Up Test Data
@@ -189,13 +189,23 @@ DELETE FROM storage.objects WHERE bucket_id = 'test-bucket';
 DELETE FROM storage.buckets WHERE id = 'test-bucket';
 ```
 
-## Next Steps
+## Local Development with Supabase
 
-Once tests pass:
+You can also test with local Supabase (requires Docker):
 
-1. **Deploy to hardware**: See [INSTALL.md](INSTALL.md) for device installation
-2. **Build your project**: Use the examples as templates
-3. **Customize**: Modify `example.py` to test your own use cases
+```bash
+# Start local Supabase
+npx supabase start
+
+# Update .env to use local URLs
+SUPABASE_URL=http://localhost:54321
+SUPABASE_KEY=<shown in terminal after start>
+
+# Run tests
+micropython examples/example.py
+```
+
+This gives you a fully local development environment without using your production Supabase project.
 
 ## Running Tests on CI/CD
 
@@ -222,20 +232,33 @@ micropython tests/test_basic.py
 micropython examples/example.py
 ```
 
-## Local Development with Supabase
+## Contributing Guidelines
 
-You can also test with local Supabase (requires Docker):
+1. **Test on actual hardware** before submitting PRs (if possible)
+2. **Keep memory usage low** — this library runs on constrained devices
+3. **No external dependencies** — only use MicroPython built-ins
+4. **Maintain compatibility** with MicroPython 1.19+
+5. **Follow existing code style**
 
-```bash
-# Start local Supabase
-npx supabase start
+## Project Structure
 
-# Update .env to use local URLs
-SUPABASE_URL=http://localhost:54321
-SUPABASE_KEY=<shown in terminal after start>
-
-# Run tests
-micropython examples/example.py
+```
+supabase-micro/
+├── src/supabase_micro/    # Library source code
+│   ├── __init__.py
+│   ├── client.py          # Main client
+│   ├── http.py            # HTTP implementation
+│   ├── postgrest.py       # Database operations
+│   ├── storage.py         # File storage
+│   ├── auth.py            # Authentication
+│   └── utils.py           # Utilities
+├── tests/                 # Test files
+├── examples/              # Example scripts
+├── supabase/              # Supabase config and migrations
+└── docs/                  # Documentation
 ```
 
-This gives you a fully local development environment without using your production Supabase project.
+## Support
+
+- [GitHub Issues](https://github.com/supabase/supabase-micro/issues)
+- [Supabase Discord](https://discord.supabase.com)

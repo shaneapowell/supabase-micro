@@ -14,7 +14,7 @@ pip install mpremote
 mpremote cp -r src/supabase_micro :/lib/supabase_micro
 
 # 4. Verify installation
-mpremote exec "import supabase_micro; print('✓ Library installed!')"
+mpremote exec "import supabase_micro; print('Library installed!')"
 ```
 
 ### Method 2: Using ampy
@@ -68,14 +68,12 @@ import webrepl_setup
 
 ## For Local Development/Testing
 
-See [TESTING.md](TESTING.md) for complete local testing guide.
-
-Quick install for Python developers:
-
 ```bash
 cd /path/to/supabase-micro
 pip install -e .
 ```
+
+See [contributing.md](contributing.md) for complete local testing guide.
 
 ## Verify Installation
 
@@ -84,7 +82,7 @@ pip install -e .
 ```python
 # In REPL or main.py
 from supabase_micro import create_client
-print("✓ supabase-micro is installed!")
+print("supabase-micro is installed!")
 
 # Check version
 import supabase_micro
@@ -101,12 +99,12 @@ client = create_client(
     "https://example.supabase.co",
     "test-key"
 )
-print(f"✓ Client created: {client.host}")
+print(f"Client created: {client.host}")
 ```
 
-## File Size
+## File Sizes
 
-Total library size: ~46KB (source files only)
+Total library size: ~46KB
 
 Individual files:
 - `__init__.py`: 1.3 KB
@@ -119,9 +117,9 @@ Individual files:
 
 ## Memory Requirements
 
-- **ESP32**: ✓ Works well (~240KB+ RAM)
-- **ESP8266**: ✓ Works with careful memory management (~40KB free)
-- **RP2040**: ✓ Works excellently (264KB RAM)
+- **ESP32**: Works well (~240KB+ RAM)
+- **ESP8266**: Works with careful memory management (~40KB free)
+- **RP2040**: Works excellently (264KB RAM)
 - **Other boards**: Should work if you have 40KB+ free RAM
 
 ## Troubleshooting
@@ -164,12 +162,43 @@ Individual files:
 3. Try: `mpremote connect /dev/ttyUSB0 cp -r src/supabase_micro :/lib/supabase_micro`
 4. On macOS, use `/dev/cu.usbserial-*` instead of `/dev/tty.*`
 
-## Next Steps
+### "No module named 'supabase_micro'" (on device)
 
-1. ✓ Library installed
-2. See [examples/README.md](examples/README.md) for usage examples
-3. Check [README.md](README.md) for full API documentation
-4. Run [examples/quickstart.py](examples/quickstart.py) to test
+- Library not installed on device
+- Solution: Copy the library to `/lib/supabase_micro` on your device
+
+### "WiFi connection failed"
+
+- Wrong SSID/password
+- Device out of range
+- Solution: Check credentials and WiFi signal
+
+### "OSError: -2" or connection errors
+
+- Network issues
+- Wrong Supabase URL
+- Firewall blocking
+- Solution: Verify URL is correct, test network connectivity
+
+### Memory errors on ESP8266
+
+- Limited RAM (~40KB free)
+- Solutions:
+  - Use `.limit()` on queries
+  - Process data immediately
+  - Call `gc.collect()` between operations
+  - Use smaller data payloads
+
+### "401 Unauthorized"
+
+- Wrong API key
+- Solution: Check your API key in Supabase dashboard (Settings → API)
+
+### "404 Not Found"
+
+- Table or bucket doesn't exist
+- Wrong table/bucket name
+- Solution: Check table/bucket exists in Supabase dashboard
 
 ## Uninstall
 
