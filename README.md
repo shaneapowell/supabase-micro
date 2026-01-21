@@ -7,6 +7,7 @@ A minimal, dependency-free Supabase client library for MicroPython.
 - **Zero dependencies**: Uses only MicroPython built-ins (`socket`, `ssl`, `json`)
 - **PostgREST support**: Full database CRUD operations with query builder
 - **Storage support**: Upload, download, list, and delete files
+- **Authentication**: Email/password auth, session management, user operations
 - **Memory efficient**: Designed for constrained devices (ESP32, ESP8266, RP2040)
 - **Synchronous API**: Simple blocking operations, no async complexity
 - **Method chaining**: Familiar query builder pattern like supabase-py
@@ -175,6 +176,138 @@ result = (
 }
 ```
 
+### Authentication
+
+#### Sign Up
+
+```python
+# Sign up with email and password
+result = client.auth.sign_up(
+    email="user@example.com",
+    password="password123"
+)
+
+# Sign up with user metadata
+result = client.auth.sign_up(
+    email="user@example.com",
+    password="password123",
+    options={
+        "data": {
+            "username": "john_doe",
+            "age": 25
+        }
+    }
+)
+
+if result["status_code"] == 200:
+    user = result["data"]["user"]
+    print(f"User created: {user['email']}")
+```
+
+#### Sign In
+
+```python
+# Sign in with email and password
+result = client.auth.sign_in_with_password(
+    email="user@example.com",
+    password="password123"
+)
+
+if result["status_code"] == 200:
+    print("Signed in successfully!")
+    access_token = result["data"]["access_token"]
+```
+
+#### Get User
+
+```python
+# Get current user
+result = client.auth.get_user()
+
+if result["status_code"] == 200:
+    user = result["data"]["user"]
+    print(f"User: {user['email']}")
+    print(f"Metadata: {user.get('user_metadata', {})}")
+```
+
+#### Update User
+
+```python
+# Update user metadata
+result = client.auth.update_user({
+    "data": {
+        "theme": "dark",
+        "notifications": True
+    }
+})
+
+# Update email or password
+result = client.auth.update_user({
+    "email": "newemail@example.com",
+    "password": "newpassword123"
+})
+```
+
+#### Session Management
+
+```python
+# Get current session
+result = client.auth.get_session()
+session = result["data"]["session"]
+
+if session:
+    print(f"Token expires at: {session['expires_at']}")
+
+# Refresh session before token expires
+result = client.auth.refresh_session()
+
+if result["status_code"] == 200:
+    print("Session refreshed!")
+```
+
+#### Authenticated Queries (RLS)
+
+Once signed in, all database queries automatically use the user's JWT token, enabling Row Level Security (RLS) policies:
+
+```python
+# Sign in first
+client.auth.sign_in_with_password("user@example.com", "password123")
+
+# Now queries use user context - RLS policies apply
+result = client.table("todos").select("*").execute()
+
+# Insert with automatic user_id from RLS
+result = client.table("todos").insert({
+    "task": "Buy groceries",
+    "is_complete": False
+}).execute()
+```
+
+#### Password Reset
+
+```python
+# Send password reset email
+result = client.auth.reset_password_for_email(
+    email="user@example.com",
+    options={
+        "redirect_to": "https://yourapp.com/reset-password"
+    }
+)
+
+if result["status_code"] == 200:
+    print("Password reset email sent!")
+```
+
+#### Sign Out
+
+```python
+# Sign out current user
+result = client.auth.sign_out()
+
+if result["status_code"] == 204:
+    print("Signed out successfully!")
+```
+
 ### Storage (File Operations)
 
 #### Upload
@@ -323,6 +456,55 @@ if result["status_code"] == 200:
     print("Uploaded successfully!")
 ```
 
+### ESP32 with Authentication and RLS
+
+```python
+import network
+from supabase_micro import create_client
+
+# Connect to WiFi
+wlan = network.WLAN(network.STA_IF)
+wlan.active(True)
+wlan.connect("your-ssid", "your-password")
+
+while not wlan.isconnected():
+    pass
+
+print("Connected:", wlan.ifconfig())
+
+# Initialize client
+client = create_client(
+    "https://your-project.supabase.co",
+    "your-anon-key"
+)
+
+# Sign in user
+result = client.auth.sign_in_with_password(
+    "user@example.com",
+    "password123"
+)
+
+if result["status_code"] == 200:
+    print("Signed in as:", result["data"]["user"]["email"])
+
+    # Now all queries use user's JWT - RLS policies apply
+    # Insert data (user_id automatically set by RLS)
+    result = client.table("sensor_data").insert({
+        "temperature": 23.5,
+        "humidity": 65.0,
+        "device": "esp32-living-room"
+    }).execute()
+
+    if result["status_code"] == 201:
+        print("Data logged successfully!")
+
+    # Query only this user's data (RLS filters automatically)
+    result = client.table("sensor_data").select("*").limit(10).execute()
+    print(f"Retrieved {len(result['data'])} readings")
+else:
+    print("Login failed:", result["error"])
+```
+
 ## Error Handling
 
 The library returns status codes instead of raising exceptions for API errors:
@@ -358,8 +540,9 @@ The library is designed for memory-constrained devices:
 - **No external dependencies**: Reduces overall memory footprint
 
 **Typical memory usage:**
-- Base library: ~10-15KB
+- Base library: ~20-25KB (including auth)
 - Per request overhead: ~2-5KB
+- Active session: ~1-2KB
 - Response data: Depends on data size
 
 **Tips for low-memory devices (ESP8266):**
@@ -385,7 +568,9 @@ The library is designed for memory-constrained devices:
 - **No connection pooling**: New connection per request
 - **Basic filtering**: Supports eq, neq, gt, gte, lt, lte, limit, order
 - **No RPC**: Function calls not supported
-- **No Auth**: Sign up/in methods not implemented
+- **Basic Auth**: Email/password only (no OAuth, MFA, or magic links)
+- **No auto-refresh**: Token refresh must be called manually
+- **No session persistence**: Sessions stored in memory only (cleared on reboot)
 - **No Realtime**: WebSocket subscriptions not supported
 
 ## License

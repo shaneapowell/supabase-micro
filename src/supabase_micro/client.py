@@ -4,6 +4,7 @@ from supabase_micro.http import HTTPClient
 from supabase_micro.utils import parse_url
 from supabase_micro.postgrest import PostgrestQueryBuilder
 from supabase_micro.storage import StorageClient
+from supabase_micro.auth import AuthClient
 
 
 class SupabaseClient:
@@ -46,6 +47,9 @@ class SupabaseClient:
         # Initialize storage client
         self.storage = StorageClient(self)
 
+        # Initialize auth client
+        self.auth = AuthClient(self)
+
     def table(self, table_name):
         """Access a table for PostgREST operations.
 
@@ -63,6 +67,13 @@ class SupabaseClient:
         Returns:
             dict: Headers with API key and authorization
         """
+        # If user authenticated, use their JWT
+        if self.auth._session and self.auth._session.get("access_token"):
+            return {
+                "apiKey": self.key,
+                "Authorization": f"Bearer {self.auth._session['access_token']}"
+            }
+        # Otherwise use anon key (existing behavior)
         return {
             "apiKey": self.key,
             "Authorization": f"Bearer {self.key}"

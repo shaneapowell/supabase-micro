@@ -35,6 +35,7 @@ ampy --port /dev/ttyUSB0 put src/supabase_micro/client.py /lib/supabase_micro/cl
 ampy --port /dev/ttyUSB0 put src/supabase_micro/http.py /lib/supabase_micro/http.py
 ampy --port /dev/ttyUSB0 put src/supabase_micro/postgrest.py /lib/supabase_micro/postgrest.py
 ampy --port /dev/ttyUSB0 put src/supabase_micro/storage.py /lib/supabase_micro/storage.py
+ampy --port /dev/ttyUSB0 put src/supabase_micro/auth.py /lib/supabase_micro/auth.py
 ampy --port /dev/ttyUSB0 put src/supabase_micro/utils.py /lib/supabase_micro/utils.py
 
 # 4. Verify
@@ -105,14 +106,15 @@ print(f"✓ Client created: {client.host}")
 
 ## File Size
 
-Total library size: ~35KB (source files only)
+Total library size: ~46KB (source files only)
 
 Individual files:
 - `__init__.py`: 1.3 KB
-- `client.py`: 1.8 KB
+- `client.py`: 2.0 KB
 - `http.py`: 5.4 KB
 - `postgrest.py`: 6.8 KB
 - `storage.py`: 7.0 KB
+- `auth.py`: 11.0 KB
 - `utils.py`: 4.7 KB
 
 ## Memory Requirements
