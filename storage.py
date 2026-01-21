@@ -5,7 +5,7 @@ try:
 except ImportError:
     import ujson as _json
 
-from .utils import generate_boundary, build_multipart_body
+from utils import generate_boundary, build_multipart_body
 
 
 class StorageClient:

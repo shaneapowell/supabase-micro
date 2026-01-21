@@ -63,7 +63,9 @@ def url_encode_value(value):
     # URL encode - simple implementation
     result = []
     for char in s:
-        if char.isalnum() or char in "-_.~":
+        # Check if alphanumeric (MicroPython compatible)
+        is_alnum = ('a' <= char <= 'z') or ('A' <= char <= 'Z') or ('0' <= char <= '9')
+        if is_alnum or char in "-_.~":
             result.append(char)
         elif char == " ":
             result.append("+")

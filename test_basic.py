@@ -5,10 +5,6 @@ Run this to verify the library is working correctly.
 """
 
 import sys
-import os
-
-# Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 print("Testing supabase-micro library components...")
 print("=" * 60)
@@ -16,16 +12,17 @@ print("=" * 60)
 # Test 1: Import modules
 print("\n1. Testing imports...")
 try:
-    import __init__ as supabase_micro
+    from client import SupabaseClient
     from utils import parse_url, url_encode, url_encode_value
     from utils import generate_boundary, build_multipart_body, guess_content_type
-    create_client = supabase_micro.create_client
+
+    def create_client(url, key):
+        return SupabaseClient(url, key)
+
     print("   ✓ All imports successful")
 except Exception as e:
     print(f"   ✗ Import error: {e}")
-    import traceback
-    traceback.print_exc()
-    exit(1)
+    sys.exit(1)
 
 # Test 2: URL parsing
 print("\n2. Testing URL parsing...")
