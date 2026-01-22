@@ -2,6 +2,15 @@
 
 A minimal Supabase client for MicroPython and IoT devices.
 
+> **Experimental & Unofficial**
+>
+> This library is an experimental project and should not be considered as officially supported.
+> We welcome your feedback, comments, and contributions! If you're using supabase-micro on a device,
+> we'd love to hear about your experience — please share your experimentation examples, use cases,
+> and any issues you encounter via [GitHub Issues](https://github.com/supabase/supabase-micro/issues), 
+> [GitHub Discussions](https://github.com/supabase/supabase-micro/discussions)
+> or [Supabase Discord](https://discord.supabase.com). Your input helps us improve!
+
 ## Why supabase-micro?
 
 The official [supabase-py](https://github.com/supabase/supabase-py) library is designed for standard Python environments and pulls in many dependencies that won't run on microcontrollers. **supabase-micro** fills this gap:
