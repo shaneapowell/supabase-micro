@@ -268,11 +268,214 @@ class AuthClient:
 
         return self._request("POST", "/recover", body)
 
+    # ========================================================================
+    # Async variants — mirror the sync methods above using uasyncio.
+    # ========================================================================
+
+    async def sign_up_async(self, email, password, options=None):
+        """Async variant of sign_up(). Creates a new user account without blocking.
+
+        Mirrors sign_up() but uses _request_async() instead of _request().
+        Any logic change in sign_up() must be replicated here.
+        """
+        body = {
+            "email": email,
+            "password": password
+        }
+
+        if options:
+            if "data" in options:
+                body["data"] = options["data"]
+            if "redirect_to" in options:
+                body["options"] = {"redirect_to": options["redirect_to"]}
+
+        result = await self._request_async("POST", "/signup", body)
+
+        # If signup successful and session returned, store it
+        if result["status_code"] == 200 and "session" in result.get("data", {}):
+            session = result["data"]["session"]
+            if session.get("access_token"):
+                self._set_session(
+                    session["access_token"],
+                    session.get("refresh_token"),
+                    result["data"].get("user")
+                )
+
+        return result
+
+    async def sign_in_with_password_async(self, email, password):
+        """Async variant of sign_in_with_password(). Signs in without blocking.
+
+        Mirrors sign_in_with_password() but uses _request_async() instead of _request().
+        Any logic change in sign_in_with_password() must be replicated here.
+        """
+        body = {
+            "email": email,
+            "password": password,
+            "grant_type": "password"
+        }
+
+        result = await self._request_async("POST", "/token?grant_type=password", body)
+
+        # Store session on successful login
+        if result["status_code"] == 200:
+            data = result["data"]
+            self._set_session(
+                data.get("access_token"),
+                data.get("refresh_token"),
+                data.get("user")
+            )
+
+        return result
+
+    async def sign_out_async(self):
+        """Async variant of sign_out(). Signs out without blocking.
+
+        Mirrors sign_out() but uses _request_async() instead of _request().
+        Any logic change in sign_out() must be replicated here.
+        """
+        # Call logout endpoint if we have a session
+        if self._session and self._session.get("access_token"):
+            result = await self._request_async("POST", "/logout")
+        else:
+            result = {"data": None, "status_code": 204}
+
+        # Always clear local session
+        self._clear_session()
+
+        return result
+
+    async def get_user_async(self):
+        """Async variant of get_user(). Fetches current user without blocking.
+
+        Mirrors get_user() but uses _request_async() instead of _request().
+        Any logic change in get_user() must be replicated here.
+        """
+        # Return cached user from session if available
+        if self._session and self._session.get("user"):
+            return {
+                "data": {"user": self._session["user"]},
+                "status_code": 200
+            }
+
+        # If we have a token but no user, fetch from API
+        if self._session and self._session.get("access_token"):
+            return await self._request_async("GET", "/user")
+
+        # No session
+        return {
+            "error": {"message": "No active session"},
+            "status_code": 401
+        }
+
+    async def refresh_session_async(self, refresh_token=None):
+        """Async variant of refresh_session(). Refreshes access token without blocking.
+
+        Mirrors refresh_session() but uses _request_async() instead of _request().
+        Any logic change in refresh_session() must be replicated here.
+        """
+        # Get refresh token from parameter or current session
+        token = refresh_token
+        if not token and self._session:
+            token = self._session.get("refresh_token")
+
+        if not token:
+            return {
+                "error": {"message": "No refresh token available"},
+                "status_code": 400
+            }
+
+        body = {
+            "refresh_token": token,
+            "grant_type": "refresh_token"
+        }
+
+        result = await self._request_async("POST", "/token?grant_type=refresh_token", body)
+
+        # Update session with new tokens and wrap in standard format
+        if result["status_code"] == 200:
+            data = result["data"]
+            self._set_session(
+                data.get("access_token"),
+                data.get("refresh_token"),
+                data.get("user")
+            )
+            # Wrap in standard format for consistency
+            result["data"] = {"session": self._session}
+
+        return result
+
+    async def update_user_async(self, attributes):
+        """Async variant of update_user(). Updates user attributes without blocking.
+
+        Mirrors update_user() but uses _request_async() instead of _request().
+        Any logic change in update_user() must be replicated here.
+        """
+        if not self._session or not self._session.get("access_token"):
+            return {
+                "error": {"message": "No active session"},
+                "status_code": 401
+            }
+
+        result = await self._request_async("PUT", "/user", attributes)
+
+        # Wrap user in standard format and update cached user
+        if result["status_code"] == 200:
+            user_data = result.get("data", {})
+            # If data is the user object directly (not wrapped), wrap it
+            if "id" in user_data and "user" not in user_data:
+                result["data"] = {"user": user_data}
+                user_data = result["data"]
+
+            # Update cached user in session
+            if self._session and "user" in user_data:
+                self._session["user"] = user_data["user"]
+
+        return result
+
+    async def reset_password_for_email_async(self, email, options=None):
+        """Async variant of reset_password_for_email(). Sends password reset without blocking.
+
+        Mirrors reset_password_for_email() but uses _request_async() instead of _request().
+        Any logic change in reset_password_for_email() must be replicated here.
+        """
+        body = {"email": email}
+
+        if options and "redirect_to" in options:
+            body["options"] = {"redirect_to": options["redirect_to"]}
+
+        return await self._request_async("POST", "/recover", body)
+
+    async def refresh_if_needed_async(self, threshold_seconds=300):
+        """Async variant of refresh_if_needed(). Auto-refreshes session without blocking.
+
+        Mirrors refresh_if_needed() but uses async helpers.
+        Any logic change in refresh_if_needed() must be replicated here.
+        """
+        check = self.should_refresh_token(threshold_seconds)
+        should_refresh = check["data"]["should_refresh"]
+
+        if not should_refresh:
+            return {
+                "data": {"refreshed": False, "session": self._session},
+                "status_code": 200
+            }
+
+        # Attempt refresh
+        result = await self.refresh_session_async()
+        if result["status_code"] == 200:
+            return {
+                "data": {"refreshed": True, "session": self._session},
+                "status_code": 200
+            }
+        else:
+            # Return the error from refresh_session
+            return result
+
     # Internal helpers
 
-    def _request(self, method, path, body=None):
-        """
-        Make authenticated request to GoTrue API.
+    def _build_auth_request(self, method, path, body=None):
+        """Build auth request components. Shared by _request() and _request_async().
 
         Args:
             method: HTTP method (GET, POST, PUT, DELETE)
@@ -280,8 +483,7 @@ class AuthClient:
             body: Optional request body dict
 
         Returns:
-            {"data": {...}, "status_code": 2xx}
-            or {"error": {...}, "status_code": 4xx}
+            tuple: (method, full_path, headers, body_bytes)
         """
         # Build full path for auth API
         full_path = f"/auth/v1{path}"
@@ -298,34 +500,103 @@ class AuthClient:
         else:
             headers["Authorization"] = f"Bearer {self._client.key}"
 
+        return method, full_path, headers, json.dumps(body) if body else None
+
+    def _parse_auth_response(self, body_bytes, status_code):
+        """Parse auth response. Shared by _request() and _request_async().
+
+        Args:
+            body_bytes: Raw response body bytes
+            status_code: HTTP status code
+
+        Returns:
+            {"data": {...}, "status_code": 2xx}
+            or {"error": {...}, "status_code": 4xx}
+        """
+        # Parse JSON response
+        try:
+            if body_bytes:
+                data = json.loads(body_bytes.decode('utf-8'))
+            else:
+                data = {}
+        except:
+            # If JSON parsing fails, return error
+            data = {"message": "Failed to parse response"}
+
+        if 200 <= status_code < 300:
+            return {"data": data, "status_code": status_code}
+        else:
+            # Error response
+            return {"error": data, "status_code": status_code}
+
+    def _request(self, method, path, body=None):
+        """
+        Make authenticated request to GoTrue API.
+
+        MIRROR: Async variant _request_async() in this module.
+        Any logic change here must be replicated in _request_async().
+
+        Args:
+            method: HTTP method (GET, POST, PUT, DELETE)
+            path: API path (e.g., "/signup")
+            body: Optional request body dict
+
+        Returns:
+            {"data": {...}, "status_code": 2xx}
+            or {"error": {...}, "status_code": 4xx}
+        """
+        method, full_path, headers, req_body = self._build_auth_request(method, path, body)
+
         # Make request
         try:
             result = self._client.http_client.request(
                 method=method,
                 path=full_path,
                 headers=headers,
-                body=json.dumps(body) if body else None
+                body=req_body
             )
 
-            # Parse response
-            status_code = result.get("status_code", 500)
-            response_body = result.get("body", b"")
+            return self._parse_auth_response(
+                result.get("body", b""),
+                result.get("status_code", 500)
+            )
 
-            # Parse JSON response
-            try:
-                if response_body:
-                    data = json.loads(response_body.decode('utf-8'))
-                else:
-                    data = {}
-            except:
-                # If JSON parsing fails, return error
-                data = {"message": "Failed to parse response"}
+        except Exception as e:
+            return {
+                "error": {"message": str(e)},
+                "status_code": 500
+            }
 
-            if 200 <= status_code < 300:
-                return {"data": data, "status_code": status_code}
-            else:
-                # Error response
-                return {"error": data, "status_code": status_code}
+    async def _request_async(self, method, path, body=None):
+        """Async variant of _request(). Makes authenticated request without blocking.
+
+        Mirrors _request() but uses http_client.request_async() instead of request().
+        Any logic change in _request() must be replicated here.
+
+        Args:
+            method: HTTP method (GET, POST, PUT, DELETE)
+            path: API path (e.g., "/signup")
+            body: Optional request body dict
+
+        Returns:
+            {"data": {...}, "status_code": 2xx}
+            or {"error": {...}, "status_code": 4xx}
+        """
+        method, full_path, headers, req_body = self._build_auth_request(method, path, body)
+
+        # Make request
+        try:
+            result = await self._client.http_client.request_async(
+                method=method,
+                path=full_path,
+                headers=headers,
+                body=req_body
+            )
+
+            return self._parse_auth_response(
+                result.get("body", b""),
+                result.get("status_code", 500)
+            )
 
         except Exception as e:
             return {

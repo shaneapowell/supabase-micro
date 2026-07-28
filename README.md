@@ -16,7 +16,7 @@ A minimal Supabase client for MicroPython and IoT devices.
 The official [supabase-py](https://github.com/supabase/supabase-py) library is designed for standard Python environments and pulls in many dependencies that won't run on microcontrollers. **supabase-micro** fills this gap:
 
 - **Built for constrained devices** — ESP32, ESP8266, RP2040, and similar microcontrollers
-- **Zero dependencies** — Uses only MicroPython built-ins (`socket`, `ssl`, `json`)
+- **Zero dependencies** — Uses only MicroPython built-ins (`socket`, `ssl`, `json`, `asyncio`)
 - **Tiny footprint** — ~46KB total, runs on devices with 40KB+ free RAM
 - **Core features only** — Implements what IoT devices actually need: **PostgREST**, **Auth**, **Storage**
 
@@ -206,6 +206,23 @@ result = client.storage.from_("bucket").list()
 result = client.storage.from_("bucket").delete("data.txt")
 ```
 
+### Async
+
+All I/O methods have an `_async` variant for non-blocking operation. Original sync API remains unchanged.
+
+```python
+import asyncio
+
+async def main():
+    result = await client.table("readings").select("*").limit(5).execute_async()
+    result = await client.auth.sign_in_with_password_async(email, password)
+    result = await client.storage.from_("bucket").upload_async("data.txt", b"content")
+
+asyncio.run(main())
+```
+
+See [Async Guide](docs/async.md) for full documentation.
+
 ## Documentation
 
 - **[Installation Guide](docs/installation.md)** — All installation methods, verification, troubleshooting
@@ -226,7 +243,6 @@ result = client.storage.from_("bucket").delete("data.txt")
 
 ## Limitations
 
-- **Synchronous only** — No async/await support
 - **No connection pooling** — New connection per request
 - **Basic Auth** — Email/password only (no OAuth, MFA, magic links)
 - **No session persistence** — Sessions cleared on reboot (security feature)

@@ -189,18 +189,14 @@ class PostgrestQueryBuilder:
         self.params["order"] = order_value
         return self
 
-    def execute(self):
-        """Execute the query and return results.
+    def _build_request(self):
+        """Build request components. Shared by execute() and execute_async().
 
         Returns:
-            dict: {"data": [...], "status_code": 200} on success
-                  {"error": {...}, "status_code": 4xx} on error
+            tuple: (method, path, headers, body) or None if no method set
         """
         if not self.method:
-            return {
-                "error": "No method specified. Use select(), insert(), update(), or delete().",
-                "status_code": 400
-            }
+            return None
 
         # Build path
         path = f"/rest/v1/{self.table_name}"
@@ -228,42 +224,108 @@ class PostgrestQueryBuilder:
         if self.json_body is not None:
             body = _json.dumps(self.json_body)
 
+        return self.method, path, headers, body
+
+    def _parse_response(self, body_bytes, status_code):
+        """Parse response into standard format. Shared by execute() and execute_async().
+
+        Args:
+            body_bytes: Raw response body bytes
+            status_code: HTTP status code
+
+        Returns:
+            dict: {"data": ..., "status_code": ...} or {"error": ..., "status_code": ...}
+        """
+        # Parse JSON response
+        try:
+            if body_bytes:
+                data = _json.loads(body_bytes.decode('utf-8'))
+            else:
+                data = None
+        except:
+            # If JSON parsing fails, return raw body
+            try:
+                data = body_bytes.decode('utf-8') if body_bytes else None
+            except:
+                data = body_bytes
+
+        # Return success or error based on status code
+        if 200 <= status_code < 300:
+            return {
+                "data": data,
+                "status_code": status_code
+            }
+        else:
+            return {
+                "error": data,
+                "status_code": status_code
+            }
+
+    def execute(self):
+        """Execute the query and return results.
+
+        MIRROR: Async variant execute_async() in this module.
+        Any logic change here must be replicated in execute_async().
+
+        Returns:
+            dict: {"data": [...], "status_code": 200} on success
+                  {"error": {...}, "status_code": 4xx} on error
+        """
+        req = self._build_request()
+        if req is None:
+            return {
+                "error": "No method specified. Use select(), insert(), update(), or delete().",
+                "status_code": 400
+            }
+
+        method, path, headers, body = req
+
         # Make request
         try:
             response = self.client.http_client.request(
-                method=self.method,
+                method=method,
                 path=path,
                 headers=headers,
                 body=body
             )
 
-            status_code = response["status_code"]
-            response_body = response["body"]
+            return self._parse_response(response["body"], response["status_code"])
 
-            # Parse JSON response
-            try:
-                if response_body:
-                    data = _json.loads(response_body.decode('utf-8'))
-                else:
-                    data = None
-            except:
-                # If JSON parsing fails, return raw body
-                try:
-                    data = response_body.decode('utf-8') if response_body else None
-                except:
-                    data = response_body
+        except Exception as e:
+            return {
+                "error": str(e),
+                "status_code": 500
+            }
 
-            # Return success or error based on status code
-            if 200 <= status_code < 300:
-                return {
-                    "data": data,
-                    "status_code": status_code
-                }
-            else:
-                return {
-                    "error": data,
-                    "status_code": status_code
-                }
+    async def execute_async(self):
+        """Async variant of execute(). Executes the query without blocking.
+
+        Mirrors execute() but uses http_client.request_async() instead of request().
+        Any logic change in execute() must be replicated here.
+
+        Returns:
+            dict: {"data": [...], "status_code": 200} on success
+                  {"error": {...}, "status_code": 4xx} on error
+        """
+        req = self._build_request()
+        if req is None:
+            return {
+                "error": "No method specified. Use select(), insert(), update(), or delete().",
+                "status_code": 400
+            }
+
+        method, path, headers, body = req
+
+        # Make request
+        try:
+            response = await self.client.http_client.request_async(
+                method=method,
+                path=path,
+                headers=headers,
+                body=body
+            )
+
+            return self._parse_response(response["body"], response["status_code"])
 
         except Exception as e:
             return {

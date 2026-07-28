@@ -226,6 +226,173 @@ class StorageBucket:
                 "status_code": 500
             }
 
+     # ========================================================================
+    # Async variants — mirror the sync methods above using uasyncio.
+    # ========================================================================
+
+    async def upload_async(self, path, data, content_type=None):
+        """Async variant of upload(). Uploads a file without blocking.
+
+        Mirrors upload() but uses http_client.request_async() instead of request().
+        Any logic change in upload() must be replicated here.
+        """
+        # Generate multipart boundary
+        boundary = generate_boundary()
+
+        # Build multipart body
+        body = build_multipart_body(boundary, path, data, content_type)
+
+        # Build path
+        api_path = f"/storage/v1/object/{self.bucket_name}/{path}"
+
+        # Build headers
+        headers = self.client._get_auth_headers()
+        headers.update({
+            "Content-Type": f"multipart/form-data; boundary={boundary}"
+        })
+
+        # Make request
+        try:
+            response = await self.client.http_client.request_async(
+                method="POST",
+                path=api_path,
+                headers=headers,
+                body=body
+            )
+
+            return self._parse_response(response)
+
+        except Exception as e:
+            return {
+                "error": str(e),
+                "status_code": 500
+            }
+
+    async def download_async(self, path):
+        """Async variant of download(). Downloads a file without blocking.
+
+        Mirrors download() but uses http_client.request_async() instead of request().
+        Any logic change in download() must be replicated here.
+        """
+        # Build path
+        api_path = f"/storage/v1/object/{self.bucket_name}/{path}"
+
+        # Build headers
+        headers = self.client._get_auth_headers()
+
+        # Make request
+        try:
+            response = await self.client.http_client.request_async(
+                method="GET",
+                path=api_path,
+                headers=headers
+            )
+
+            status_code = response["status_code"]
+
+            if 200 <= status_code < 300:
+                # Return raw bytes for successful download
+                return {
+                    "data": response["body"],
+                    "status_code": status_code
+                }
+            else:
+                # Try to parse error as JSON
+                try:
+                    error = _json.loads(response["body"].decode('utf-8'))
+                except:
+                    error = response["body"].decode('utf-8') if response["body"] else "Unknown error"
+
+                return {
+                    "error": error,
+                    "status_code": status_code
+                }
+
+        except Exception as e:
+            return {
+                "error": str(e),
+                "status_code": 500
+            }
+
+    async def list_async(self, path="", limit=100):
+        """Async variant of list(). Lists files without blocking.
+
+        Mirrors list() but uses http_client.request_async() instead of request().
+        Any logic change in list() must be replicated here.
+        """
+        # Build path
+        api_path = f"/storage/v1/object/list/{self.bucket_name}"
+
+        # Build headers
+        headers = self.client._get_auth_headers()
+        headers.update({
+            "Content-Type": "application/json"
+        })
+
+        # Build body
+        body = _json.dumps({
+            "prefix": path,
+            "limit": limit
+        })
+
+        # Make request
+        try:
+            response = await self.client.http_client.request_async(
+                method="POST",
+                path=api_path,
+                headers=headers,
+                body=body
+            )
+
+            return self._parse_response(response)
+
+        except Exception as e:
+            return {
+                "error": str(e),
+                "status_code": 500
+            }
+
+    async def delete_async(self, paths):
+        """Async variant of delete(). Deletes files without blocking.
+
+        Mirrors delete() but uses http_client.request_async() instead of request().
+        Any logic change in delete() must be replicated here.
+        """
+        # Ensure paths is a list
+        if isinstance(paths, str):
+            paths = [paths]
+
+        # Build path
+        api_path = f"/storage/v1/object/{self.bucket_name}"
+
+        # Build headers
+        headers = self.client._get_auth_headers()
+        headers.update({
+            "Content-Type": "application/json"
+        })
+
+        # Build body
+        body = _json.dumps({
+            "prefixes": paths
+        })
+
+        # Make request
+        try:
+            response = await self.client.http_client.request_async(
+                method="DELETE",
+                path=api_path,
+                headers=headers,
+                body=body
+            )
+
+            return self._parse_response(response)
+
+        except Exception as e:
+            return {
+                "error": str(e),
+                "status_code": 500
+            }
+
     def _parse_response(self, response):
         """Parse HTTP response into standard format.
 
