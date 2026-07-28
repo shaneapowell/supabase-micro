@@ -281,10 +281,13 @@ class HTTPClient:
             except AttributeError:
                 pass
 
-        # Async connect with SSL (open_connection handles both TCP and SSL)
-        reader, writer = await asyncio.open_connection(
-            self.host, self.port, ssl=ctx, ssl_hostname=self.host
-        )
+     # Async connect with SSL (open_connection handles both TCP and SSL)
+        if self.use_ssl:
+            reader, writer = await asyncio.open_connection(
+                self.host, self.port, ssl=ctx
+            )
+        else:
+            reader, writer = await asyncio.open_connection(self.host, self.port)
 
         # Send request (uses shared builder)
         request_bytes = self._build_request_bytes(method, path, headers, body)
