@@ -138,13 +138,13 @@ class TestAuthMethods(unittest.TestCase):
         # Mock HTTP response
         self.mock_http_client.request.return_value = {
             "status_code": 200,
-            "body": {
+            "body": json.dumps({
                 "user": {"id": "123", "email": "test@example.com"},
                 "session": {
                     "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjMiLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJleHAiOjEyMzQ1Njc4OTB9.sig",
                     "refresh_token": "refresh-token-123"
                 }
-            }
+            }).encode('utf-8')
         }
 
         result = self.auth.sign_up("test@example.com", "password123")
@@ -159,13 +159,13 @@ class TestAuthMethods(unittest.TestCase):
         """Test signup with user metadata."""
         self.mock_http_client.request.return_value = {
             "status_code": 200,
-            "body": {
+            "body": json.dumps({
                 "user": {"id": "123", "email": "test@example.com", "user_metadata": {"name": "Test"}},
                 "session": {
                     "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjMiLCJleHAiOjEyMzQ1Njc4OTB9.sig",
                     "refresh_token": "refresh-token-123"
                 }
-            }
+            }).encode('utf-8')
         }
 
         result = self.auth.sign_up(
@@ -178,7 +178,6 @@ class TestAuthMethods(unittest.TestCase):
         # Check that request was made with metadata
         call_args = self.mock_http_client.request.call_args
         body = call_args[1]["body"]
-        import json
         body_dict = json.loads(body)
         self.assertIn("data", body_dict)
 
@@ -186,11 +185,11 @@ class TestAuthMethods(unittest.TestCase):
         """Test successful signin."""
         self.mock_http_client.request.return_value = {
             "status_code": 200,
-            "body": {
+            "body": json.dumps({
                 "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjMiLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJleHAiOjEyMzQ1Njc4OTB9.sig",
                 "refresh_token": "refresh-token-123",
                 "user": {"id": "123", "email": "test@example.com"}
-            }
+            }).encode('utf-8')
         }
 
         result = self.auth.sign_in_with_password("test@example.com", "password123")
@@ -253,15 +252,17 @@ class TestAuthMethods(unittest.TestCase):
 
     def test_get_user_from_api(self):
         """Test getting user from API when not cached."""
-        self.auth._set_session(
-            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjMiLCJleHAiOjEyMzQ1Njc4OTB9.sig",
-            "refresh-token-123",
-            None  # No cached user
-        )
+        # Bypass _set_session to avoid JWT-based user extraction
+        self.auth._session = {
+            "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjMiLCJleHAiOjEyMzQ1Njc4OTB9.sig",
+            "refresh_token": "refresh-token-123",
+            "expires_at": None,
+            "user": None  # No cached user, forces API call
+        }
 
         self.mock_http_client.request.return_value = {
             "status_code": 200,
-            "body": {"user": {"id": "123", "email": "test@example.com"}}
+            "body": json.dumps({"user": {"id": "123", "email": "test@example.com"}}).encode('utf-8')
         }
 
         result = self.auth.get_user()
@@ -317,9 +318,9 @@ class TestAuthMethods(unittest.TestCase):
 
         self.mock_http_client.request.return_value = {
             "status_code": 200,
-            "body": {
+            "body": json.dumps({
                 "user": {"id": "123", "email": "test@example.com", "user_metadata": {"name": "Updated"}}
-            }
+            }).encode('utf-8')
         }
 
         result = self.auth.update_user({"data": {"name": "Updated"}})
