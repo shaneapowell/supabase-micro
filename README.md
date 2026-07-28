@@ -1,6 +1,29 @@
-# supabase-micro
+# supabase-micro (asyncio)
 
 A minimal Supabase client for MicroPython and IoT devices.
+
+> ### Community Enhancement: Asyncio Support
+>
+> This is a community-enhanced fork of [supabase-micro](https://github.com/supabase/supabase-micro) that adds **full asyncio support** via dual-mode methods.
+>
+> **What's different:**
+> - Every I/O method now has an `_async` variant (e.g., `execute_async()`, `sign_in_with_password_async()`)
+> - Original sync API remains **100% unchanged** — drop-in replacement for existing code
+> - Zero new dependencies — uses only `uasyncio` (built into MicroPython)
+> - All async methods share internal logic with sync counterparts — no code duplication
+>
+> **Why this matters:**
+> IoT devices often need to perform multiple concurrent operations — reading sensors, uploading data, checking auth tokens — without blocking. Asyncio enables non-blocking I/O, allowing your device to do useful work while waiting for network responses.
+>
+> ```python
+> # Sync (original) — blocks until complete
+> result = client.table("sensors").select("*").execute()
+>
+> # Async (new) — yields to event loop while waiting
+> result = await client.table("sensors").select("*").execute_async()
+> ```
+>
+> Get started with async: [Async Guide](docs/async.md)
 
 > **Experimental & Unofficial**
 >
@@ -226,7 +249,6 @@ result = client.storage.from_("bucket").delete("data.txt")
 
 ## Limitations
 
-- **Synchronous only** — No async/await support
 - **No connection pooling** — New connection per request
 - **Basic Auth** — Email/password only (no OAuth, MFA, magic links)
 - **No session persistence** — Sessions cleared on reboot (security feature)
