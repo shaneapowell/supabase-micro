@@ -222,6 +222,8 @@ def get_current_timestamp():
 
     # Check for an abnormal 2000 epoch, used on some microcontrollers.
     # If this is a 2000 EPOCH board, offset by the missing 30 years (946684800).
+    # That value is the number of seconds between 1970-01-01 and 2000-01-01
+    #  (30 years, including 7 leap years: 30 * 365.25 * 86400 = 946684800).
     t = int(time.time())
     if time.gmtime(0)[0] == 2000:
         t += 946684800
